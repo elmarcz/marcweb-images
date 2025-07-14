@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Imágenes Google Drive</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: #f0f0f0;
+    }
+    img {
+      max-width: 80%;
+      max-height: 80vh;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <button id="authorize_button">Autorizar</button>
+  <div id="image-container"></div>
+
+  <!-- ✅ gapi debe estar cargado ANTES del script principal -->
+  <script src="https://apis.google.com/js/api.js?onload=onGapiLoad" async defer></script>
+
+  <script>
+    const CLIENT_ID = "462527854840-00u103sbg8e3skqco9ihvgqa96j2a4ps.apps.googleusercontent.com";
+    const FOLDER_ID = "1HE4bAxtYHSuwzcHNBj1A6NMtKOAOdls8";
+    const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
+
+    const authButton = document.getElementById("authorize_button");
+    const imageContainer = document.getElementById("image-container");
+
+    function onGapiLoad() {
+      gapi.load("client:auth2", initClient);
+    }
+
+    function initClient() {
+      gapi.client
+        .init({
+          clientId: CLIENT_ID,
+          scope: SCOPES,
+        })
+        .then(() => {
+          authButton.disabled = false;
+          authButton.onclick = () => {
+            gapi.auth2
+              .getAuthInstance()
+              .signIn()
+              .then(() => listImages());
+          };
+        })
+        .catch((e) => {
+          console.error("Error en initClient", e);
+        });
+    }
+
+    function listImages() {
+      gapi.client.drive.files
+        .list({
+          q: `'${FOLDER_ID}' in parents and mimeType contains 'image/' and trashed = false`,
+          fields: "files(id, name)",
+        })
+        .then((response) => {
+          const files = response.result.files;
+          if (!files || files.length === 0) {
+            imageContainer.innerHTML = "<p>No se encontraron imágenes.</p>";
+            return;
+          }
+
+          const randomFile = files[Math.floor(Math.random() * files.length)];
+          const url = `https://drive.google.com/uc?export=view&id=${randomFile.id}`;
+          imageContainer.innerHTML = `<img src="${url}" alt="${randomFile.name}">`;
+        })
+        .catch((err) => {
+          console.error("Error listando archivos:", err);
+        });
+    }
+  </script>
+</body>
+</html>
